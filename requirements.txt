@@ -1,0 +1,9 @@
+upstash-redis
+python-decouple
+jupyter
+replicate
+pillow
+fastapi[standard]
+fastapi-limiter
+# support .heic images -> see readme
+# pillow-heif 
