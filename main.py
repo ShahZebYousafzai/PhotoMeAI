@@ -1,3 +1,4 @@
+from typing import Optional
 from decouple import config
 from fastapi import (
     FastAPI,
@@ -52,6 +53,6 @@ def create_image(data: ImageGenerationRequest):
 @app.get("/predictions", dependencies=[
     Depends(RateLimiter(times=1000, seconds=20))
 ])
-def list_predictions_view():
-    results = helpers.list_prediction_results()
+def list_predictions_view(status:Optional[str] = None):
+    results = helpers.list_prediction_results(status=status)
     return results
