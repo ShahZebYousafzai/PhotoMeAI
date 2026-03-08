@@ -51,4 +51,5 @@ def list_prediction_results(
     replicate_client = get_replicate_client()
     preds = replicate_client.predictions.list()
     results = list(preds.results)
-    return preds
+    results = [x.dict() for x in results]
+    return results
