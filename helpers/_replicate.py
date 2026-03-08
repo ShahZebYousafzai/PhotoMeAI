@@ -43,3 +43,12 @@ def generate_image(prompt: str,
         "id": pred.id,
         "status": pred.status,
     }
+
+def list_prediction_results(
+        model=REPLICATE_MODEL,
+        version=REPLICATE_MODEL_VERSION
+    ):
+    replicate_client = get_replicate_client()
+    preds = replicate_client.predictions.list()
+    results = list(preds.results)
+    return preds
