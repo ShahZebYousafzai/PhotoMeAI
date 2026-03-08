@@ -56,3 +56,14 @@ def create_image(data: ImageGenerationRequest):
 def list_predictions_view(status:Optional[str] = None):
     results = helpers.list_prediction_results(status=status)
     return results
+    
+@app.get("/predictions/{prediction_id}", dependencies=[
+    Depends(RateLimiter(times=1000, seconds=20))
+])
+def prediction_detail_view(prediction_id: str):
+    data, status_code = helpers.get_prediction_detail(prediction_id)
+    if status_code == 404:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+    if status_code == 500:
+        raise HTTPException(status_code=500, detail="Error fetching prediction")
+    return data

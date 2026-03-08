@@ -2,6 +2,26 @@ from functools import lru_cache
 
 from decouple import config
 from replicate.client import Client
+from replicate.exceptions import ReplicateError
+
+
+def _prediction_slim(pred):
+    """Return only url, status, created_at, completed_at for list API responses."""
+    return {
+        "url": f"/predictions/{pred.id}",
+        "status": pred.status,
+        "created_at": pred.created_at,
+        "completed_at": pred.completed_at,
+    }
+
+
+def _prediction_to_dict(pred):
+    """Convert Replicate Prediction (Pydantic v1) to a plain dict for FastAPI JSON serialization."""
+    if hasattr(pred, "model_dump"):
+        return pred.model_dump()
+    if hasattr(pred, "dict"):
+        return pred.dict()
+    return dict(pred)
 
 REPLICATE_API_TOKEN = config("REPLICATE_API_TOKEN")
 REPLICATE_MODEL = config("REPLICATE_MODEL")
@@ -61,4 +81,16 @@ def list_prediction_results(
     results = [x for x in results if x.model==model and x.version==version]
     if status is not None:
         results = [x for x in results if x.status == status]
-    return results
+    return [_prediction_slim(p) for p in results]
+
+def get_prediction_detail(
+        prediction_id=None
+    ):
+    replicate_client = get_replicate_client()
+    try:
+        pred = replicate_client.predictions.get(prediction_id)
+    except ReplicateError:
+        return None, 404
+    except Exception:
+        return None, 500
+    return _prediction_to_dict(pred), 200
