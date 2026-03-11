@@ -150,7 +150,3 @@ For more details and examples, see [backend/README.md](backend/README.md).
 **Backend**
 
 - Run with: `uvicorn main:app --reload` (from `backend/`)
-
-## License
-
-See repository for license information.
