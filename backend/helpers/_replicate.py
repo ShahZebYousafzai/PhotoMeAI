@@ -20,16 +20,20 @@ def get_replicate_model_version():
     return rep_version
 
 
-def generate_image(prompt, 
-                require_trigger_word=True, 
-                trigger_word="TOK"):
+def generate_image(
+    prompt,
+    require_trigger_word: bool = True,
+    trigger_word: str = "TOK",
+    num_outputs: int = 2,
+    output_format: str = "jpg",
+):
     if require_trigger_word:
         if trigger_word not in prompt:
             raise Exception(f"{trigger_word} was not included")
     input_args = {
         "prompt": prompt,
-        "num_outputs": 2,
-        "output_format": "jpg",
+        "num_outputs": num_outputs,
+        "output_format": output_format,
     }
     replicate_client = get_replicate_client()
     rep_version = get_replicate_model_version()
