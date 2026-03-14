@@ -32,8 +32,16 @@ const App: React.FC = () => {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveResult, setSaveResult] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!zoomedImageUrl) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomedImageUrl(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomedImageUrl]);
 
   const hasActivePrediction = useMemo(
     () => currentPredictionId !== null,
@@ -53,7 +61,6 @@ const App: React.FC = () => {
     setPredictionFiles([]);
     setPredictionStatus("starting");
     setDisplayNumOutputs(numOutputs);
-    setSaveResult(null);
 
     try {
       const body = {
@@ -147,10 +154,12 @@ const App: React.FC = () => {
 
   const handleDownload = async (filePath: string, index: number) => {
     try {
-      const { data } = await apiClient.get(filePath, {
-        responseType: "blob",
-      });
-      const url = URL.createObjectURL(data as Blob);
+      // S3 URLs are absolute; fetch directly to avoid CORS/API key issues
+      const isAbsolute = filePath.startsWith("http://") || filePath.startsWith("https://");
+      const blob = isAbsolute
+        ? await (await fetch(filePath)).blob()
+        : (await apiClient.get(filePath, { responseType: "blob" })).data as Blob;
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = currentPredictionId
@@ -163,24 +172,31 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveToServer = async () => {
-    if (!currentPredictionId) return;
-    setIsSaving(true);
-    setSaveResult(null);
-    try {
-      const { data } = await apiClient.post<{ saved: string[]; directory: string }>(
-        `/predictions/${currentPredictionId}/save`
-      );
-      setSaveResult(`Saved to ${data.directory}`);
-    } catch (err: any) {
-      setSaveResult(err?.response?.data?.detail || "Save failed.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="app-root">
+      {zoomedImageUrl && (
+        <div
+          className="image-zoom-backdrop"
+          onClick={() => setZoomedImageUrl(null)}
+          role="presentation"
+        >
+          <div
+            className="image-zoom-content"
+            onClick={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <button
+              type="button"
+              className="image-zoom-close"
+              onClick={() => setZoomedImageUrl(null)}
+              aria-label="Close zoom"
+            >
+              ×
+            </button>
+            <img src={zoomedImageUrl} alt="Zoomed output" />
+          </div>
+        </div>
+      )}
       <div className="app-shell">
         <aside className="sidebar">
           <header className="sidebar-header">
@@ -283,21 +299,6 @@ const App: React.FC = () => {
 
           {hasActivePrediction && (
             <>
-              {predictionStatus === "succeeded" && predictionFiles.length > 0 && (
-                <div className="output-actions">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={handleSaveToServer}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? "Saving…" : "Save to server"}
-                  </button>
-                  {saveResult && (
-                    <span className="save-result">{saveResult}</span>
-                  )}
-                </div>
-              )}
               <div className="grid">
                 {Array.from({ length: displaySlots }).map((_, index) => {
                   const fileUrl = predictionFiles[index];
@@ -307,7 +308,14 @@ const App: React.FC = () => {
                     <div key={index} className="grid-cell">
                       {src && !isLoading ? (
                         <>
-                          <img src={src} alt={`Output ${index + 1}`} />
+                          <button
+                            type="button"
+                            className="cell-image-wrap"
+                            onClick={() => setZoomedImageUrl(src)}
+                            title="Click to zoom"
+                          >
+                            <img src={src} alt={`Output ${index + 1}`} />
+                          </button>
                           <button
                             type="button"
                             className="cell-download"

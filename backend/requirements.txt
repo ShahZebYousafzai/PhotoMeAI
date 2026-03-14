@@ -1,3 +1,4 @@
+boto3
 upstash-redis
 python-decouple
 jupyter

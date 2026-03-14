@@ -63,11 +63,13 @@ class PredictionDetailModel(BaseModel):
         _output = data.get('output') or []
         output_names = [Path(x) for x in _output]
         files = []
-        for idx, output_path in enumerate(output_names):
-            suffix = output_path.suffix
-            files.append(
-                f"{url}/files/{idx}{suffix}"
-            )
+        for idx, raw_url in enumerate(_output):
+            # If output is already a full URL (e.g. S3), use it for display
+            if isinstance(raw_url, str) and (raw_url.startswith("http://") or raw_url.startswith("https://")):
+                files.append(raw_url)
+            else:
+                suffix = output_names[idx].suffix if idx < len(output_names) else ".jpg"
+                files.append(f"{url}/files/{idx}{suffix}")
         return cls(
             id=_id,
             url=url,

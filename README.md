@@ -116,6 +116,11 @@ PhotoMeAI/
 | `REPLICATE_MODEL_VERSION` | Model version ID |
 | `REDIS_URL` | Redis connection URL (e.g. `redis://localhost:6379/0` or Upstash URL) |
 | `API_ACCESS_KEY` | Secret key; clients must send this in the `X-API-Key` header |
+| `AWS_ACCESS_KEY_ID` | AWS access key (for S3 uploads) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key (for S3 uploads) |
+| `S3_BUCKET` | S3 bucket name (default: `photome-ai-bucket`) |
+| `S3_REGION` | AWS region (default: `us-east-1`) |
+| `S3_PREFIX` | Key prefix under bucket (default: `data`) |
 
 ### Frontend (`frontend/.env`)
 
@@ -132,7 +137,7 @@ PhotoMeAI/
 | `GET` | `/predictions` | List all predictions (optional `?status=`) |
 | `GET` | `/processing` | List predictions with status `processing` |
 | `GET` | `/predictions/{id}` | Get prediction details and output file URLs |
-| `POST` | `/predictions/{id}/save` | Save prediction outputs to `backend/data/generated/` |
+| `POST` | `/predictions/{id}/save` | Upload prediction outputs to S3 (`bucket/data/{prediction_id}/`) |
 | `GET` | `/predictions/{id}/files/{index}.{ext}` | Stream a generated image file |
 
 All requests (except CORS preflight) require the header: `X-API-Key: <your API_ACCESS_KEY>`.

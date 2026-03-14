@@ -9,6 +9,7 @@ PhotoMeAI is a small FastAPI service that wraps a Replicate image generation mod
 - **List processing jobs** via `/processing`.
 - **Inspect a single prediction** via `/predictions/{prediction_id}`.
 - **Stream generated files** for a prediction via `/predictions/{prediction_id}/files/{index}.{ext}`.
+- **Save outputs to S3** via `POST /predictions/{prediction_id}/save` (uploads to `s3://photome-ai-bucket/data/{prediction_id}/`).
 - **Rate limiting** powered by `fastapi-limiter` and Redis.
 - **API key protection** using the `X-API-Key` header.
 
@@ -27,6 +28,10 @@ Set the following variables (for local dev you can use a `.env` file with `pytho
 - **`REPLICATE_API_TOKEN`** – your Replicate API token.
 - **`REPLICATE_MODEL`** – Replicate model identifier.
 - **`REPLICATE_MODEL_VERSION`** – specific version ID for the chosen model.
+- **`AWS_ACCESS_KEY_ID`** / **`AWS_SECRET_ACCESS_KEY`** – for uploading generated images to S3 (see project `aws.txt` for bucket details; put these in `.env` only, never commit).
+- **`S3_BUCKET`** (optional) – default `photome-ai-bucket`.
+- **`S3_REGION`** (optional) – default `us-east-1`.
+- **`S3_PREFIX`** (optional) – key prefix, default `data` (objects go to `s3://bucket/data/{prediction_id}/`).
 
 ### Installation
 
