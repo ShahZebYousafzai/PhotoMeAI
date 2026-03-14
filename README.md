@@ -2,6 +2,36 @@
 
 PhotoMeAI is a full-stack application for AI-powered image generation. It uses [Replicate](https://replicate.com) to run an image generation model and exposes a FastAPI backend with a React + Vite frontend.
 
+## How to run the project
+
+1. **Prerequisites**: Python 3.10+, Node.js (v18+), Redis, and a [Replicate](https://replicate.com/account/api-tokens) API token.
+2. **Backend**: From project root, run:
+   ```bash
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\activate          # Windows
+   # source .venv/bin/activate     # macOS/Linux
+   pip install -r requirements.txt
+   ```
+   Create `backend/.env` with your Replicate token, Redis URL, and `API_ACCESS_KEY` (see [Environment variables](#environment-variables)).
+   ```bash
+   uvicorn main:app --reload
+   ```
+   API: **http://127.0.0.1:8000**
+3. **Frontend**: In a new terminal:
+   ```bash
+   cd frontend
+   npm install
+   ```
+   Create `frontend/.env` with `VITE_API_BASE_URL=http://localhost:8000` and `VITE_API_KEY` matching backend `API_ACCESS_KEY`.
+   ```bash
+   npm run dev
+   ```
+   App: **http://localhost:5173**
+4. **Use**: Ensure Redis is running, then open **http://localhost:5173** in your browser.
+
+Detailed setup (virtual env, env files, optional Redis) is in [Quick start](#quick-start) below.
+
 ## Features
 
 - **Generate images** from text prompts via the API or UI
@@ -98,12 +128,14 @@ PhotoMeAI/
 
    The app will be at **http://localhost:5173**.
 
-### 3. Use the app
+### 3. Run order
 
-1. Start **Redis** if you’re running it locally.
-2. Start the **backend** (`uvicorn main:app --reload` in `backend/`).
-3. Start the **frontend** (`npm run dev` in `frontend/`).
-4. Open **http://localhost:5173** in your browser.
+Run services in this order:
+
+1. **Redis** – Start Redis if you’re running locally (or use a hosted URL like Upstash in `.env`).
+2. **Backend** – From `backend/`: `uvicorn main:app --reload`. API at **http://127.0.0.1:8000**.
+3. **Frontend** – From `frontend/`: `npm run dev`. App at **http://localhost:5173**.
+4. Open **http://localhost:5173** in your browser to use the app.
 
 ## Environment variables
 
