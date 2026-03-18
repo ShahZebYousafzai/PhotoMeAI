@@ -1,189 +1,71 @@
-# PhotoMeAI
+## PhotoMeAI
 
-PhotoMeAI is a full-stack application for AI-powered image generation. It uses [Replicate](https://replicate.com) to run an image generation model and exposes a FastAPI backend with a React + Vite frontend.
+PhotoMeAI is a small FastAPI service that wraps a Replicate image generation model and exposes a simple HTTP API for creating image predictions and inspecting their status/results.
 
-## How to run the project
+### Features
 
-1. **Prerequisites**: Python 3.10+, Node.js (v18+), Redis, and a [Replicate](https://replicate.com/account/api-tokens) API token.
-2. **Backend**: From project root, run:
-   ```bash
-   cd backend
-   python -m venv .venv
-   .venv\Scripts\activate          # Windows
-   # source .venv/bin/activate     # macOS/Linux
-   pip install -r requirements.txt
-   ```
-   Create `backend/.env` with your Replicate token, Redis URL, and `API_ACCESS_KEY` (see [Environment variables](#environment-variables)).
-   ```bash
-   uvicorn main:app --reload
-   ```
-   API: **http://127.0.0.1:8000**
-3. **Frontend**: In a new terminal:
-   ```bash
-   cd frontend
-   npm install
-   ```
-   Create `frontend/.env` with `VITE_API_BASE_URL=http://localhost:8000` and `VITE_API_KEY` matching backend `API_ACCESS_KEY`.
-   ```bash
-   npm run dev
-   ```
-   App: **http://localhost:5173**
-4. **Use**: Ensure Redis is running, then open **http://localhost:5173** in your browser.
+- **Generate images** from a text prompt via `/generate`.
+- **List predictions** with optional status filtering via `/predictions`.
+- **List processing jobs** via `/processing`.
+- **Inspect a single prediction** via `/predictions/{prediction_id}`.
+- **Stream generated files** for a prediction via `/predictions/{prediction_id}/files/{index}.{ext}`.
+- **Save outputs to S3** via `POST /predictions/{prediction_id}/save` (uploads to `s3://photome-ai-bucket/data/{prediction_id}/`).
+- **Rate limiting** powered by `fastapi-limiter` and Redis.
+- **API key protection** using the `X-API-Key` header.
 
-Detailed setup (virtual env, env files, optional Redis) is in [Quick start](#quick-start) below.
+### Requirements
 
-## Features
+- Python 3.10+
+- Redis instance (for rate limiting)
+- Replicate account and API token
 
-- **Generate images** from text prompts via the API or UI
-- **List and inspect predictions** (status, output files)
-- **Stream generated images** from prediction results
-- **Rate limiting** (Redis + fastapi-limiter)
-- **API key protection** via `X-API-Key` header
+### Environment variables
 
-## Project structure
+Set the following variables (for local dev you can use a `.env` file with `python-decouple`):
 
-```
-PhotoMeAI/
-├── backend/          # FastAPI API (Python)
-│   ├── main.py       # App, routes, middleware
-│   ├── helpers/      # Replicate client, schemas, fetchers, rate limiting
-│   ├── data/         # Generated images (created at runtime)
-│   └── notebooks/    # Jupyter notebooks
-├── frontend/         # React + Vite + TypeScript
-│   └── src/
-└── README.md
+- **`REDIS_URL`** – Redis connection URL (e.g. `redis://localhost:6379/0`).
+- **`API_ACCESS_KEY`** – value expected in the `X-API-Key` header.
+- **`REPLICATE_API_TOKEN`** – your Replicate API token.
+- **`REPLICATE_MODEL`** – Replicate model identifier.
+- **`REPLICATE_MODEL_VERSION`** – specific version ID for the chosen model.
+- **`AWS_ACCESS_KEY_ID`** / **`AWS_SECRET_ACCESS_KEY`** – for uploading generated images to S3 (see project `aws.txt` for bucket details; put these in `.env` only, never commit).
+- **`S3_BUCKET`** (optional) – default `photome-ai-bucket`.
+- **`S3_REGION`** (optional) – default `us-east-1`.
+- **`S3_PREFIX`** (optional) – key prefix, default `data` (objects go to `s3://bucket/data/{prediction_id}/`).
+
+### Installation
+
+```bash
+pip install -r requirements.txt
 ```
 
-## Prerequisites
+### Running the API
 
-- **Python 3.10+**
-- **Node.js** (v18+ recommended) and npm
-- **Redis** (for rate limiting; e.g. [Upstash](https://upstash.com) for a hosted option)
-- **Replicate account** and [API token](https://replicate.com/account/api-tokens)
+From the project root:
 
-## Quick start
+```bash
+uvicorn main:app --reload
+```
 
-### 1. Backend
+The server will start on `http://127.0.0.1:8000` by default.
 
-1. **Create and activate a virtual environment** (recommended):
+### Usage
 
-   ```bash
-   cd backend
-   python -m venv .venv
-   # Windows:
-   .venv\Scripts\activate
-   # macOS/Linux:
-   source .venv/bin/activate
-   ```
+**Generate an image**
 
-2. **Install dependencies**:
+```bash
+curl -X POST "http://127.0.0.1:8000/generate" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"prompt": "TOK a portrait of a dog in a studio"}'
+```
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+The response includes a prediction ID you can use with the other endpoints.
 
-3. **Configure environment** – create a `.env` file in `backend/` with:
+### Project structure
 
-   ```env
-   REPLICATE_API_TOKEN=your_replicate_api_token
-   REPLICATE_MODEL=shahzebyousafzai/super-shah
-   REPLICATE_MODEL_VERSION=664a305263b83d16bfc59abe7e75253be4d01544f9416a0179cf25ace9aec69c
-   REDIS_URL=redis://localhost:6379/0
-   API_ACCESS_KEY=your-secret-api-key
-   ```
-
-   Replace with your Replicate token, Redis URL, and a secret value for `API_ACCESS_KEY` (the frontend will send this in `X-API-Key`).
-
-4. **Run the API** (from the `backend/` directory):
-
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-   The API will be available at **http://127.0.0.1:8000**.
-
-### 2. Frontend
-
-1. **Install dependencies**:
-
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. **Configure environment** – create a `.env` file in `frontend/` (or copy from `.env.example`):
-
-   ```env
-   VITE_API_BASE_URL=http://localhost:8000
-   VITE_API_KEY=your-secret-api-key
-   ```
-
-   `VITE_API_KEY` must match the backend `API_ACCESS_KEY`.
-
-3. **Run the dev server** (from the `frontend/` directory):
-
-   ```bash
-   npm run dev
-   ```
-
-   The app will be at **http://localhost:5173**.
-
-### 3. Run order
-
-Run services in this order:
-
-1. **Redis** – Start Redis if you’re running locally (or use a hosted URL like Upstash in `.env`).
-2. **Backend** – From `backend/`: `uvicorn main:app --reload`. API at **http://127.0.0.1:8000**.
-3. **Frontend** – From `frontend/`: `npm run dev`. App at **http://localhost:5173**.
-4. Open **http://localhost:5173** in your browser to use the app.
-
-## Environment variables
-
-### Backend (`backend/.env`)
-
-| Variable | Description |
-|----------|-------------|
-| `REPLICATE_API_TOKEN` | Replicate API token |
-| `REPLICATE_MODEL` | Replicate model identifier (e.g. `owner/model-name`) |
-| `REPLICATE_MODEL_VERSION` | Model version ID |
-| `REDIS_URL` | Redis connection URL (e.g. `redis://localhost:6379/0` or Upstash URL) |
-| `API_ACCESS_KEY` | Secret key; clients must send this in the `X-API-Key` header |
-| `AWS_ACCESS_KEY_ID` | AWS access key (for S3 uploads) |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key (for S3 uploads) |
-| `S3_BUCKET` | S3 bucket name (default: `photome-ai-bucket`) |
-| `S3_REGION` | AWS region (default: `us-east-1`) |
-| `S3_PREFIX` | Key prefix under bucket (default: `data`) |
-
-### Frontend (`frontend/.env`)
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API base URL (e.g. `http://localhost:8000`) |
-| `VITE_API_KEY` | Must match backend `API_ACCESS_KEY` |
-
-## API overview
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/generate` | Create an image generation prediction (body: `prompt`, `num_outputs`, etc.) |
-| `GET` | `/predictions` | List all predictions (optional `?status=`) |
-| `GET` | `/processing` | List predictions with status `processing` |
-| `GET` | `/predictions/{id}` | Get prediction details and output file URLs |
-| `POST` | `/predictions/{id}/save` | Upload prediction outputs to S3 (`bucket/data/{prediction_id}/`) |
-| `GET` | `/predictions/{id}/files/{index}.{ext}` | Stream a generated image file |
-
-All requests (except CORS preflight) require the header: `X-API-Key: <your API_ACCESS_KEY>`.
-
-For more details and examples, see [backend/README.md](backend/README.md).
-
-## Scripts
-
-**Frontend**
-
-- `npm run dev` – Start Vite dev server
-- `npm run build` – Production build
-- `npm run preview` – Preview production build
-
-**Backend**
-
-- Run with: `uvicorn main:app --reload` (from `backend/`)
+- **`main.py`** – FastAPI application, routes, middleware.
+- **`helpers/_replicate.py`** – Replicate client helpers.
+- **`helpers/schemas.py`** – Pydantic response models.
+- **`helpers/fetchers.py`** – async HTTP file fetching.
+- **`helpers/ratelimiting.py`** – rate limiting lifespan setup.
