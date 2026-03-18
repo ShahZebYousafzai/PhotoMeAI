@@ -61,6 +61,30 @@ def _sqlite_add_missing_columns():
             conn.execute(text(f"ALTER TABLE predictions ADD COLUMN {name} {col_type}"))
 
 
+def _sqlite_add_missing_user_columns():
+    """Small SQLite migration helper for `users` table."""
+    if not str(DATABASE_URL).startswith("sqlite"):
+        return
+
+    insp = inspect(engine)
+    if "users" not in insp.get_table_names():
+        return
+
+    existing = {col["name"] for col in insp.get_columns("users")}
+
+    desired: dict[str, str] = {
+        "name": "TEXT",
+    }
+
+    to_add = [(name, col_type) for name, col_type in desired.items() if name not in existing]
+    if not to_add:
+        return
+
+    with engine.begin() as conn:
+        for name, col_type in to_add:
+            conn.execute(text(f"ALTER TABLE users ADD COLUMN {name} {col_type}"))
+
+
 def get_db():
     """Dependency that yields a DB session."""
     db = SessionLocal()
@@ -75,3 +99,4 @@ def init_db():
     from helpers import models  # noqa: F401 - ensure models are registered
     Base.metadata.create_all(bind=engine)
     _sqlite_add_missing_columns()
+    _sqlite_add_missing_user_columns()

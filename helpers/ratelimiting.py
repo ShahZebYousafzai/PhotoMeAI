@@ -27,6 +27,11 @@ async def rate_limit_identifier(request: Request):
 
 @asynccontextmanager
 async def lifespan(_:FastAPI):
+    # When FastAPI uses a custom lifespan, startup events are not relied on.
+    # Initialize database schema/migrations here so auth tables/columns exist.
+    from helpers.database import init_db
+    init_db()
+
     redis_conn = redis.from_url(REDIS_URL)
     await FastAPILimiter.init(
         redis_conn,

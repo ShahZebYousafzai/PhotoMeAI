@@ -9,6 +9,9 @@ data/references
 data/inputs
 notebooks/
 
+# database
+photome.db
+
 # Mac Related
 .DS_Store
 
