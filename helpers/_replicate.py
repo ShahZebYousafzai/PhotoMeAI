@@ -1,15 +1,34 @@
 from functools import lru_cache
+import sys
 
 from decouple import config
-from replicate.client import Client
-from replicate.exceptions import ReplicateError
 
 REPLICATE_API_TOKEN = config("REPLICATE_API_TOKEN")
 REPLICATE_MODEL = config("REPLICATE_MODEL")
 REPLICATE_MODEL_VERSION = config("REPLICATE_MODEL_VERSION")
 
+def _import_replicate():
+    """
+    Replicate's current dependency stack (pydantic v1) can break on newer Python
+    versions. Import lazily so the API can still start for non-Replicate routes.
+    """
+    try:
+        from replicate.client import Client  # type: ignore
+        from replicate.exceptions import ReplicateError  # type: ignore
+        return Client, ReplicateError
+    except Exception as e:
+        py = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        raise RuntimeError(
+            "Failed to import 'replicate'. This is commonly caused by running on "
+            f"Python {py} with a Replicate/Pydantic combination that is not compatible. "
+            "Recommended fix: use Python 3.12 for this backend (new conda env) or "
+            "pin/upgrade 'replicate' to a version that supports your Python."
+        ) from e
+
+
 @lru_cache
 def get_replicate_client():
+    Client, _ = _import_replicate()
     return Client(api_token=REPLICATE_API_TOKEN)
 
 @lru_cache
@@ -27,6 +46,7 @@ def generate_image(
     num_outputs: int = 2,
     output_format: str = "jpg",
 ):
+    _import_replicate()  # ensure we fail with a helpful error
     if require_trigger_word:
         if trigger_word not in prompt:
             raise Exception(f"{trigger_word} was not included")
@@ -48,6 +68,7 @@ def list_prediction_results(
         status=None,
         max_size=500
     ):
+    _import_replicate()  # ensure we fail with a helpful error
     replicate_client = get_replicate_client()
     preds = replicate_client.predictions.list()
     results = list(preds.results)
@@ -65,6 +86,7 @@ def list_prediction_results(
 def get_prediction_detail(
         prediction_id=None
     ):
+    _, ReplicateError = _import_replicate()
     replicate_client = get_replicate_client()
     try:
         pred = replicate_client.predictions.get(prediction_id)

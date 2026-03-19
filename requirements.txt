@@ -1,11 +1,12 @@
 boto3
 upstash-redis
 python-decouple
+redis
 jupyter
 replicate
 pillow
 fastapi[standard]
-fastapi-limiter
+fastapi-limiter==0.1.6
 sqlalchemy
 python-jose[cryptography]
 passlib[bcrypt]
